@@ -43,6 +43,7 @@ const SpeakerIcon = ({isSpeaking}) => (
 const MessagePage = () => {
   const params = useParams()
   const socketConnection = useSelector(state => state?.user?.socketConnection)
+  const onlineUser = useSelector(state => state?.user?.onlineUser)
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [activeChatId, setActiveChatId] = useState(null);
   const user = useSelector(state => state?.user)
@@ -68,7 +69,9 @@ const MessagePage = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recognizer, setRecognizer] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  const [textMessage,setTextMessage]=useState("") // Ref for the notification audio
+  const [transText, settransText] = useState("");
+  const [textMessage,setTextMessage]=useState("")
+   // Ref for the notification audio
   useEffect(()=>{
       if(currentMessage.current){
           currentMessage.current.scrollIntoView({behavior : 'smooth', block : 'end'})
@@ -78,6 +81,7 @@ const MessagePage = () => {
   const handleUploadImageVideoOpen = ()=>{
     setOpenImageVideoUpload(preve => !preve)
   }
+  
   
   const handleUploadImage = async(e)=>{
     const file = e.target.files[0]
@@ -102,6 +106,7 @@ const MessagePage = () => {
       }
     })
   }
+
  
   const handleUploadVideo = async(e)=>{
     const file = e.target.files[0]
@@ -128,9 +133,93 @@ const MessagePage = () => {
   }
   const { userId } = useParams();
   console.log(' reciver ID',userId)
+  const isOnlineRec = onlineUser.includes(params.userId)
+  const isOnlineME = onlineUser.includes(user._Id)
+  console.log('online reciver',isOnlineRec)
+  console.log('online ME',isOnlineME)
+
     // The ID of the other person
   const myId = user._id;  
-  console.log('my id',myId)   // Your own user ID
+  console.log('my id',myId) 
+  
+
+  const updateMessageStatus = async (messageId, status) => {
+    try {
+      const response = await fetch('/api/messages/update-status', {
+        method: "PATCH", // Ensure this matches the server
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messageId, // Send messageId in the body
+          status, // Send status in the body
+        }),
+      });
+      console.log('rrreessponee',response)
+      if (!response.ok) {
+        throw new Error("Failed to update message status");
+      }
+
+      const data = await response.json();
+      console.log("Message status updated:", data);
+
+      // Update local message status via context
+      updateMessageStatus(messageId, status);
+
+      // Emit real-time updates based on the status
+      if (status === 'delivered') {
+        socket.emit("messageDelivered", messageId);
+      } else if (status === 'seen') {
+        socket.emit("messageSeen", messageId);
+      }
+
+    } catch (error) {
+      console.error("Error updating message status:", error);
+    }
+  };// Your own user ID
+
+  useEffect(() => {
+    if (!socketConnection) return;
+
+    // When a message is delivered
+    socketConnection.on("messageDelivered", (messageId) => {
+      updateMessageStatus(messageId, "delivered");
+    });
+
+    // When a message is seen
+    socketConnection.on("messageSeen", (messageId) => {
+      updateMessageStatus(messageId, "seen");
+    });
+
+    return () => {
+      socketConnection.off("messageDelivered");
+      socketConnection.off("messageSeen");
+    };
+  }, [socketConnection, updateMessageStatus]);
+
+  useEffect(() => {
+    if (isOnlineRec) {
+      allMessage.forEach((message) => {
+        if (message.senderId === user._id && message.status === "sent") {
+          updateMessageStatus(message._id, "delivered");
+        }
+      });
+    }
+  }, [isOnlineRec, allMessage, user]);
+
+  // Mark messages as seen when the recipient opens the chat
+  useEffect(() => {
+    if (isOnlineRec) {
+      allMessage.forEach((message) => {
+        if (message.chatId === activeChatId && message.receiver==user._id) {
+          updateMessageStatus(message._id, "seen");
+        }
+      });
+    }
+  }, [isOnlineRec,allMessage]);
+
+  //fdsdasdasdasdas
+  //dasdasssssssssssssssssssssssssssssssssssssssss
 
   useEffect(() => {
     // Make a request to get the conversation (chatId) between the two users
@@ -166,20 +255,31 @@ const MessagePage = () => {
 
   useEffect(() => {
     // Fetch messages when the component mounts or when activeChatId changes
+    const storedMessages = localStorage.getItem(`messages_${activeChatId}`);
+    if (storedMessages) {
+      setAllMessage(JSON.parse(storedMessages)); // Load messages from local storage
+    }
     if (activeChatId) {
-        fetchMessages(activeChatId);
+      fetchMessages(activeChatId);
     }
   }, [activeChatId]);
 
-  // Fetch all messages for the selected conversation
-  const fetchMessages = async (chatId) => {
+  // Fetch all messages for the selected conversation using both user IDs
+  const fetchMessages = async () => {
     try {
-        const response = await fetch(`/api/conversations/${chatId}/messages`); // Adjust the endpoint as necessary
+        const response = await fetch(`/api/conversations/messages/${user._id}/${params.userId}`);
         const messages = await response.json();
-        console.log('messages',messages)
-        setAllMessage(messages); // Set the fetched messages to state
+        console.log('Fetched messages:', messages); // Log the fetched messages
+        if (Array.isArray(messages)) {
+            setAllMessage(messages); // Set the fetched messages to state
+            localStorage.setItem(`messages_${activeChatId}`, JSON.stringify(messages)); // Store messages in local storage
+        } else {
+            console.error("Fetched messages is not an array:", messages);
+            setAllMessage([]); // Reset to an empty array if not an array
+        }
     } catch (error) {
         console.error("Error fetching messages:", error);
+        setAllMessage([]); // Reset to an empty array on error
     }
   };
 
@@ -236,24 +336,26 @@ const MessagePage = () => {
             console.log('target Lang :',targetLang) // Get the language of the receiver
 
             // Translate the message to the receiver's language
-            const translatedText = await translateMessage(textMessage, targetLang);
-
+            const transText = await translateMessage(textMessage, targetLang);
+            
             // Check if socketConnection exists
             if (socketConnection) {
                 socketConnection.emit('new message', {
                     chatId: activeChatId, // Use activeChatId instead of params.chatId
                     sender: user?._id,
                     receiver: params.userId,
-                    text: translatedText, // Send the original text to the receiver
-                    translatedText:translatedText, // Send the translated text for the receiver
+                    text: textMessage, // Send the original text to the receiver
+                    translatedText:transText, // Send the translated text for the receiver
                     imageUrl: message.imageUrl,
                     videoUrl: message.videoUrl,
                     msgByUserId: user._id,
+                    status:"sent",
                 });
                 
-
+                
                 // Clear the text message state after sending
                 setTextMessage('');
+                settransText('')
                 setMessage({ imageUrl: '', videoUrl: '' });
             }
         } catch (error) {
@@ -262,21 +364,7 @@ const MessagePage = () => {
     }
 };
 
-const MessageDisplay = ({ message, userId }) => {
-    const isSender = message.sender === userId; // Check if the current user is the sender
 
-    return (
-        <div className={`message ${isSender ? 'sent' : 'received'}`}>
-            {isSender ? (
-                // Show original text for sender
-                <p>{message.text}</p>
-            ) : (
-                // Show translated text for receiver
-                <p>{message.translatedText}</p>
-            )}
-        </div>
-    );
-};
 
 
 
@@ -467,7 +555,7 @@ const MessageDisplay = ({ message, userId }) => {
                                 )
                               }
                             </div>
-                            <p className='px-2'>{msg.text}
+                            <p className='px-2'>{user._id === msg?.msgByUserId ? msg.text : msg.translatedText}
                               {msg.text && (
                                 <button
                                 className={`ml-2 inline-block text-primary cursor-pointer ${isSpeaking ? 'text-red-500' : ''}`} // Add red text when speaking
@@ -630,3 +718,4 @@ const MessageDisplay = ({ message, userId }) => {
 }
  
 export default MessagePage
+

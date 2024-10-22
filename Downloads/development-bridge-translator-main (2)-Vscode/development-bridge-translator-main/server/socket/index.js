@@ -90,8 +90,10 @@ io.on('connection',async(socket)=>{
           sender : data?.sender,
           receiver : data?.receiver,  
           text : data.text,
+          translatedText:data.translatedText,
           imageUrl : data.imageUrl,
           videoUrl : data.videoUrl,
+          status:data.status,
           msgByUserId :  data?.msgByUserId,
         })
         const saveMessage = await message.save()

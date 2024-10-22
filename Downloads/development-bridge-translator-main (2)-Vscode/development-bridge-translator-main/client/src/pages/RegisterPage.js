@@ -128,8 +128,6 @@ const RegisterPage = () => {
   return (
     <div className='mt-5'>
       <div className='bg-white w-full max-w-md rounded overflow-hidden p-4 mx-auto'>
-        <h3>Welcome to Chat app!</h3>
-
         <form className='grid gap-4 mt-5' onSubmit={handleSubmit}>
           <div className='flex flex-col gap-1'>
             <label htmlFor='name'>Name :</label>

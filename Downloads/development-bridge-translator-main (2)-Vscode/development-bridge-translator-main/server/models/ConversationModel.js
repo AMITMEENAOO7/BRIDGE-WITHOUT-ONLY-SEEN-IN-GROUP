@@ -15,7 +15,7 @@ const messageSchema = new mongoose.Schema({
     },
     receiver :{
         type : mongoose.Schema.ObjectId,
-        ref : 'user'
+        ref : 'User'
     },
     translatedText: { // New field for translated text
         type: String,
@@ -29,9 +29,10 @@ const messageSchema = new mongoose.Schema({
         type : String,
         default : ""
     },
-    seen : {
-        type : Boolean,
-        default : false
+    status : {
+        type : String,
+        enum: ['sent', 'delivered', 'seen'],
+        default : "sent"
     },
     msgByUserId : {
         type : mongoose.Schema.ObjectId,

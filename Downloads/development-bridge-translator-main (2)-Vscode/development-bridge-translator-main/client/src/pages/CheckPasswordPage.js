@@ -65,7 +65,7 @@ const CheckPasswordPage = () => {
           <Form.Item
             label="Password"
             name="password"
-            rules={[{ required: true, message: 'Please enter your password!' }]}
+            rules={[{ message: 'Please enter your password!' }]}
           >
             <Input.Password
               placeholder='enter your password'

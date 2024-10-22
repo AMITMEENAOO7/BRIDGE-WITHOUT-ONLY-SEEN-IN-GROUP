@@ -8,7 +8,7 @@ const updateUserDetails = require('../controller/updateUserDetails')
 const searchUser = require('../controller/searchUser')
 const UserModel = require('../models/UserModel'); // Ensure this path is correct
 const translateMessage = require('../utils/translateService'); // Import the translation function
-const {ConversationModel} = require('../models/ConversationModel'); // Import the ConversationModel
+const {MessageModel, ConversationModel} = require('../models/ConversationModel'); // Import both models
 
 
 const router = express.Router()
@@ -54,18 +54,7 @@ router.post('/translate', async (req, res) => {
     }
 });
 
-// Endpoint to get conversations for a user
-router.get('/conversations/:userId', async (req, res) => {
-    try {
-        const conversations = await ConversationModel.find({ 
-            $or: [{ sender: req.params.userId }, { receiver: req.params.userId }] 
-        }).populate('messages'); // Populate messages if needed
-        res.json(conversations);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "Internal server error" });
-    }
-});
+
 // Fetch the conversation ID based on two user IDs
 router.get('/conversation/:myId/:userId', async (req, res) => {
     const { myId, userId } = req.params; // Get both user IDs from URL parameters
@@ -94,18 +83,78 @@ router.get('/conversation/:myId/:userId', async (req, res) => {
 });
 
 // Endpoint to get messages for a specific conversation
-router.get('/conversations/:conversationId/messages', async (req, res) => {
+router.get('/conversations/:chatId/messages', async (req, res) => {
     try {
-        const { conversationId } = req.params; // Get conversation ID from URL parameters
-        const conversation = await ConversationModel.findById(conversationId).populate('messages'); // Populate messages
-        if (!conversation) {
-            return res.status(404).json({ message: "Conversation not found" });
-        }
-        res.json(conversation.messages); // Return the messages
+        const { chatId } = req.body; 
+        
+        const messages = await MessageModel.find({ chatId }) // Fetch messages based on chatId
+            .populate('sender') // Populate sender details if needed
+            .populate('receiver'); // Populate receiver details if needed
+        res.json(messages); // Return the messages
+        
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+// Endpoint to get messages for a specific conversation using both user IDs
+router.get('/conversations/messages/:myId/:userId', async (req, res) => {
+    const { myId, userId } = req.params; // Get both user IDs from URL parameters
+
+    
+    try {
+        // Fetch messages where either user is the sender or receiver
+        const messages = await MessageModel.find({
+            $or: [
+                { sender: myId, receiver: userId },
+                { sender: userId, receiver: myId }
+            ]
+        })
+        .populate('sender') // Populate sender details if needed
+        .populate('receiver'); // Populate receiver details if needed
+
+        if (!messages.length) {
+            return res.status(404).json({ message: "No messages found" });
+        }
+
+        res.json(messages); // Return the messages
+        console.log('Fetched messages:', messages); // Log the fetched messages
+    } catch (error) {
+        console.error("Error fetching messages:", error); // Log the error
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// Endpoint to update message status
+
+// ... existing code ...
+
+// Endpoint to update message status
+router.patch('/messages/update-status', async (req, res) => {
+    const { messageId, status } = req.body;
+
+    
+     
+
+    try {
+      
+      const message = await MessageModel.findById(messageId);
+      
+      if (!message) return res.status(404).json({ error:  'i dont know' });
+  
+      
+      message.status = status; 
+      await message.save();
+      
+  
+      res.status(200).json(message);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update message status" });
+    }
+  });
+
+// ... existing code ...
+
 
 module.exports = router

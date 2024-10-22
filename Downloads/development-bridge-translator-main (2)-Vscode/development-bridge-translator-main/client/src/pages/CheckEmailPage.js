@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { PiUserCircle } from "react-icons/pi";
+import {FiUser } from "react-icons/fi";
 import { Form, Input, Button } from 'antd';
 
 const CheckEmailPage = () => {
@@ -30,13 +30,13 @@ const CheckEmailPage = () => {
   };
 
   return (
-    <div className='mt-5'>
+    <div className='mt-20 mx-auto w-full max-w-md'>
       <div className='bg-white w-full max-w-md rounded overflow-hidden p-4 mx-auto'>
         <div className='w-fit mx-auto mb-2'>
-          <PiUserCircle size={80} />
+          < FiUser size={80} />
         </div>
 
-        <h3>Welcome to UChat</h3>
+        <h3>Welcome to B.R.I.D.G.E</h3>
 
         <Form
           className='grid gap-4 mt-3'
@@ -46,7 +46,7 @@ const CheckEmailPage = () => {
           <Form.Item
             label="Email"
             name="email"
-            rules={[{ required: true, message: 'Please input your email!' }]}
+            rules={[{  message: 'Please input your email!' }]}
           >
             <Input
               type='email'
