@@ -108,6 +108,8 @@ const MessagePage = () => {
     })
   }
 
+  console.log('name',user.name)
+
  
   const handleUploadVideo = async(e)=>{
     const file = e.target.files[0]
@@ -136,181 +138,20 @@ const MessagePage = () => {
   console.log(' reciver ID',userId)
   const isOnlineRec = onlineUser.includes(params.userId)
   const isOnlineME = onlineUser.includes(user._Id)
-  console.log('online reciver',isOnlineRec)
-  console.log('online ME',isOnlineME)
+  //console.log('online reciver',isOnlineRec)
+  //console.log('online ME',isOnlineME)
 
     // The ID of the other person
   const myId = user._id;  
   console.log('my id',myId) 
   
+  console.log(user.language)
 
-  const updateMessageStatus = async (messageId, status) => {
-    try {
-        const response = await fetch('/api/messages/update-status', {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                messageId,
-                status,
-            }),
-        });
-        console.log('rrreessponee', response);
-        if (!response.ok) {
-            throw new Error("Failed to update message status");
-        }
-
-        const data = await response.json();
-        console.log("Message status updated:", data);
-
-        // Remove the recursive call to prevent infinite loop
-        // updateMessageStatus(messageId, status); // This line should be removed
-
-        // Emit real-time updates based on the status
-        if (status === 'delivered') {
-            socketConnection.emit("messageDelivered", messageId);
-            // Update the sender's message status as well
-            setAllMessage((prevMessages) =>
-                prevMessages.map((msg) =>
-                    msg._id === messageId ? { ...msg, status: 'delivered' } : msg
-                )
-            );
-        } else if (status === 'seen') {
-            socketConnection.emit("messageSeen", messageId);
-            // Update the sender's message status as well
-            setAllMessage((prevMessages) =>
-                prevMessages.map((msg) =>
-                    msg._id === messageId ? { ...msg, status: 'seen' } : msg
-                )
-            );
-        }
-
-    } catch (error) {
-        console.error("Error updating message status:", error);
-    }
-};
-
-
-
-
-
-  useEffect(() => {
-    if (isOnlineRec) {
-        const deliveredMessages = new Set(); // Track delivered messages
-        allMessage.forEach((message) => {
-            if (message.status === "sent" && !deliveredMessages.has(message._id)) {
-                updateMessageStatus(message._id, "delivered");
-                deliveredMessages.add(message._id); // Mark this message as delivered
-            }
-        });
-    }
-  }, [isOnlineRec, allMessage, user]);
-
- // Removed isOnlineRec from dependencies
-
-  //fdsdasdasdasdasa
-  //dasdasssssssssssssssssssssssssssssssssssssssss
-
-  useEffect(() => {
-    // Make a request to get the conversation (chatId) between the two users
-    fetchConversationId();
-    if (socketConnection) {
-      socketConnection.emit('message-page', params.userId);
-      console.log('fetchConv : message page emit params userId')
-      socketConnection.emit('seen', params.userId);
-      console.log('fetchConv :seen emit params userId')
-
-    }
-    
-  }, [socketConnection, params.userId]);
-
-    
-  async function fetchConversationId() {
-    try {
-        const response = await fetch(`/api/conversation/${user._id}/${params.userId}`);
-        const data = await response.json();
-        
-        if (data.conversationId) {
-            setActiveChatId(data.conversationId); // Store the conversation ID
-            fetchMessages(data.conversationId); // Fetch messages immediately after setting activeChatId
-        } else {
-            console.log("No conversation found between these users");
-        }
-    } catch (error) {
-        console.error("Error fetching conversation ID:", error);
-    }
-  }
-
-  useEffect(() => {
-    // Fetch messages when the component mounts or when activeChatId changes
-    if (activeChatId) {
-        fetchMessages(activeChatId);
-    }
-  }, [activeChatId]); // Ensure this runs when activeChatId changes
-
-  // Fetch all messages for the selected conversation using both user IDs
-  const fetchMessages = async (chatId) => { // Accept chatId as a parameter
-    const cachedMessages = localStorage.getItem(`messages_${chatId}`);
-    if (cachedMessages) {
-      setAllMessage(JSON.parse(cachedMessages)); // Use cached messages
-      return; // Exit early
-    }
-
-    try {
-      const response = await fetch(`/api/conversations/messages/${user._id}/${params.userId}`);
-      const messages = await response.json();
-      if (Array.isArray(messages)) {
-        setAllMessage(messages); // Set the fetched messages to state
-        localStorage.setItem(`messages_${chatId}`, JSON.stringify(messages)); // Cache messages
-      } else {
-        setAllMessage([]); // Reset to an empty array if not an array
-      }
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      setAllMessage([]); // Reset to an empty array on error
-    }
-  };
-
-  useEffect(() => {
-    if (socketConnection) {
-        const handleMessage = (message) => {
-            console.log('New message received:', message);
-            if (message.chatId === activeChatId) {
-                setAllMessage((prevMessages) => [...prevMessages, message]);
-            }
-        };
-        socketConnection.on('message-user', (message) => {
-          setDataUser(message);
-        });
-
-        socketConnection.on('message', handleMessage);
-
-        // Cleanup function to remove the listener
-        return () => {
-            socketConnection.off('message', handleMessage);
-            
-        };
-    }
-  }, [socketConnection, activeChatId]);
-
-  const handleOnChange = (e)=>{
-    const { name, value} = e.target
  
-    setMessage(preve => {
-      return{
-        ...preve,
-        text : value
-      }
-    })
-  }
-
  
 
   
   const handleSendMessage = async (e) => { 
-
-    
     if (e) {
         e.preventDefault(); // Prevent default form submission
     }
@@ -322,31 +163,47 @@ const MessagePage = () => {
             const response = await fetch(`/api/users/${params.userId}`); // Adjust the endpoint as necessary
             const receiverData = await response.json();
             const targetLang = receiverData.language;
-            console.log('target Lang :',targetLang) // Get the language of the receiver
-
-            // Translate the message to the receiver's language
-            const transText = await translateMessage(textMessage, targetLang);
-            
-            // Check if socketConnection exists
-            if (socketConnection) {
+            console.log('target Lang :',targetLang)
+            console.log('user Lang',user.language) // Get the language of the receiver
+            const messageStatus=isOnlineRec ? "delivered" : "sent";
+            // Check if sender's language is the same as receiver's language
+            if (user.language === targetLang) {
+                // If languages are the same, send the original text without translation
                 socketConnection.emit('new message', {
-                    chatId: activeChatId, // Use activeChatId instead of params.chatId
+                    chatId: activeChatId,
                     sender: user?._id,
                     receiver: params.userId,
-                    text: textMessage, // Send the original text to the receiver
-                    translatedText:transText, // Send the translated text for the receiver
+                    text: textMessage,
+                    translatedText: textMessage, // Send the original text as translated
                     imageUrl: message.imageUrl,
                     videoUrl: message.videoUrl,
                     msgByUserId: user._id,
-                    status:"sent",
+                    status: messageStatus
                 });
+            } else {
+                // Translate the message to the receiver's language
+                const transText = await translateMessage(textMessage, targetLang);
                 
-                
-                // Clear the text message state after sending
-                setTextMessage('');
-                settransText('')
-                setMessage({ imageUrl: '', videoUrl: '' });
+                // Check if socketConnection exists
+                if (socketConnection) {
+                    socketConnection.emit('new message', {
+                        chatId: activeChatId,
+                        sender: user?._id,
+                        receiver: params.userId,
+                        text: textMessage, // Send the original text to the receiver
+                        translatedText: transText, // Send the translated text for the receiver
+                        imageUrl: message.imageUrl,
+                        videoUrl: message.videoUrl,
+                        msgByUserId: user._id,
+                        status: messageStatus
+                    });
+                }
             }
+            
+            // Clear the text message state after sending
+            setTextMessage('');
+            settransText('');
+            setMessage({ imageUrl: '', videoUrl: '' });
         } catch (error) {
             console.error("Error fetching receiver's language or translating message:", error);
         }
@@ -493,22 +350,67 @@ const MessagePage = () => {
     return null; // No icon for received messages
   };
 
+  // Fetch previous messages and user data when the component mounts
   useEffect(() => {
-    // Retrieve activeChatId from localStorage on component mount
-    const storedChatId = localStorage.getItem('activeChatId');
-    if (storedChatId) {
-      setActiveChatId(storedChatId); // Set the active chat ID from localStorage
-      fetchMessages(storedChatId); // Fetch messages for the stored chat ID
- // Navigate to home if no chat ID is found
-    }
-  }, []); // Run only once on mount
+    if (socketConnection) {
+        // Emit to get messages for the current user when the component mounts
+        socketConnection.emit('message-page', params.userId);
 
-  useEffect(() => {
-    // Store activeChatId in localStorage whenever it changes
-    if (activeChatId) {
-      localStorage.setItem('activeChatId', activeChatId);
+        // Listen for previous messages
+        socketConnection.on('previous messages', (messages) => {
+            setAllMessage(messages);
+            // Emit seen status for all messages when they are loaded
+            messages.forEach(message => {
+                if (message.receiver === user._id && message.status !== 'seen') {
+                    console.log('for prev messages seen', message.translatedText);
+                    socketConnection.emit('messageSeen', message._id);
+                }
+            });
+        });
+
+        // Listen for user data
+        socketConnection.on('message-user', (message) => {
+            setDataUser(message);
+            if (message.chatId) {
+                setActiveChatId(message.chatId); // Set the active chat ID if available
+            }
+        });
+
+        // Handle incoming messages
+        const handleMessage = (message) => {
+            if (message.chatId === activeChatId) {
+                console.log('New message received:', message);
+                setAllMessage((prevMessages) => [...prevMessages, message]);
+
+                // Emit seen status if the message is from the other user and not seen
+                if (message.sender === params.userId && message.status !== 'seen') {
+                    socketConnection.emit('messageSeen', message._id);
+                }
+            }
+        };
+
+        // Listen for new messages
+        socketConnection.on('message', handleMessage);
+
+        // Listen for message status updates
+        socketConnection.on('messageStatusUpdated', (data) => {
+            console.log('messages seen update for sender');
+            setAllMessage((prevMessages) =>
+                prevMessages.map((msg) =>
+                    msg._id === data.messageId ? { ...msg, status: data.status } : msg
+                )
+            );
+        });
+
+        // Cleanup function to remove the listeners
+        return () => {
+            socketConnection.off('previous messages');
+            socketConnection.off('message-user');
+            socketConnection.off('message', handleMessage);
+            socketConnection.off('messageStatusUpdated');
+        };
     }
-  }, [activeChatId]); // Run whenever activeChatId changes
+  }, [socketConnection, params.userId, activeChatId]);
 
   return (
     <div style={{ backgroundImage : `url(${backgroundImage})`}} className='bg-no-repeat bg-cover'>

@@ -1,9 +1,9 @@
-import axios from 'axios'
+import axios from 'axios' 
 import React, { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { logout, setOnlineUser, setSocketConnection, setUser } from '../redux/userSlice'
-import Sidebar from '../components/Sidebar'
+import { logout, setOnlineUser, setSocketConnection, setUser, setGroups } from '../redux/userSlice'
+import Sidebar from '../components/Sidebar' // Sidebar remains as the default
 import logo from '../assets/nav-logo.png'
 import io from 'socket.io-client'
 
@@ -12,7 +12,7 @@ const Home = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-
+  
   const fetchUserDetails = async () => {
     try {
       const URL = `${process.env.REACT_APP_BACKEND_URL}/api/user-details`
@@ -22,6 +22,10 @@ const Home = () => {
       })
 
       dispatch(setUser(response.data.data))
+
+      // Fetch groups for the user
+      const groupsResponse = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/user-groups/${response.data.data._id}`);
+      dispatch(setGroups(groupsResponse.data.groups)); // Store groups in Redux
 
       if (response.data.data.logout) {
         dispatch(logout())
@@ -65,8 +69,8 @@ const Home = () => {
 
   return (
     <div className='grid lg:grid-cols-[300px,1fr] h-screen max-h-screen'>
-
       <section className={`bg-white ${!basePath && "hidden"} lg:block`}>
+        {/* Sidebar component */}
         <Sidebar />
       </section>
 
@@ -82,7 +86,6 @@ const Home = () => {
             width={150}
             alt='logo'
           />
-
           <h1 className='text-8xl font-extrabold text-gray-800 tracking-wider drop-shadow-md'>
             B.R.I.D.G.E
           </h1>
@@ -92,7 +95,6 @@ const Home = () => {
           <p className='text-lg mt-2 text-slate-500'>Select user to send message</p>
         </div>
       )}
-
     </div>
   )
 }

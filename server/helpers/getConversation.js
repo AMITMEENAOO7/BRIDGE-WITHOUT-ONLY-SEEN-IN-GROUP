@@ -14,7 +14,7 @@ const getConversation = async(currentUserId)=>{
                 const msgByUserId = curr?.msgByUserId?.toString()
 
                 if(msgByUserId !== currentUserId){
-                    return  preve + (curr?.seen ? 0 : 1)
+                    return  preve + (curr?.status==='seen' ? 0 : 1)
                 }else{
                     return preve
                 }
