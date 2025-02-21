@@ -17,6 +17,7 @@ async function connectDB(){
         console.log("Something is wrong ",error)
         console.log('wow whatba d')
         console.log('haha')
+        console.log('sdadasd')
         
     }
 }
