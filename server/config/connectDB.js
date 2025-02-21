@@ -15,6 +15,7 @@ async function connectDB(){
         })
     } catch (error) {
         console.log("Something is wrong ",error)
+        console.log('wow')
     }
 }
 
