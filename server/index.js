@@ -25,6 +25,7 @@ app.get('/',(request,response)=>{
 //api endpoints
 app.use('/api',router)
 app.use(app)
+app.use(devicePixelRatio.toString)
 
 connectDB().then(()=>{
     server.listen(PORT,()=>{
