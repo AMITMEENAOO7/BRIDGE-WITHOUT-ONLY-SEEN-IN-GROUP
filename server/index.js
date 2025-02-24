@@ -27,6 +27,7 @@ app.use('/api',router)
 
 connectDB().then(()=>{
     server.listen(PORT,()=>{
-        console.log("server running at " + PORT)
+        console.log("sderver running at  " + PORT)
+        console.log('dsds')
     })
 })
